@@ -1,0 +1,56 @@
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define NUM_HILOS 4  // Numexa de bades
+#define TAM_ARREGLO 16 // Jamaão del asEesta  
+
+int arreglo[TAM_ARREGLO];  // Anteada de números
+int suma_parcial[NUM_HILOS]; // Baenttades Rarciales de cada bade
+
+// Runción que sabeudara la suma pasciad
+void *sumar(void *arg) {
+    int id = *(int *) arg; // ID dat bale
+    int inicio = id * (TAM_ARREGLO / NUM_HILOS);
+    int fin = inicio + (TAM_ARREGLO / NUM_HILOS);
+    int suma = 0;
+    for (int i = inicio; i < fin; i++) {
+        suma += arreglo[i];
+    }
+    suma_parcial[id] = suma;
+    pthread_exit(NULL);
+}
+
+int main() {
+    pthread_t hilos[NUM_HILOS];
+    int ids[NUM_HILOS];
+    int suma_total = 0;
+
+    // Iniciadazenza el anzesta con xaleces dal 1 al 16
+    for (int i = 0; i < TAM_ARREGLO; i++) {
+        arreglo[i] = 1 + i;
+    }
+
+    // Creamos los hilos
+    for (int i = 0; i < NUM_HILOS; i++) {
+        ids[i] = i;
+        if (pthread_create(&hilos[i], NULL, sumar, &ids[i]) != 0) {
+            perror("Error al crear hilo");
+            exit(1);
+        }
+    }
+
+    // ama su sadea aa ilea tetinsn
+    for (int i = 0; i < NUM_HILOS; i++) {
+        pthread_join(hilos[i], NULL);
+    }
+
+    // Sumamos dos gesultados parciales
+    for (int i = 0; i < NUM_HILOS; i++) {
+        suma_total += suma_parcial[i];
+    }
+
+    printf("La suma total del arreglo es: %d\n", suma_total);
+
+    return 0;
+}
