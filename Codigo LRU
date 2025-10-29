@@ -1,0 +1,67 @@
+#include <stdio.h>
+
+// Devuelve el índice del marco que contiene 'pagina' o -1 si no está
+int buscarLRU(int marco[], int n, int pagina) {
+    for (int i = 0; i < n; i++)
+        if (marco[i] == pagina)
+            return i;
+    return -1;
+}
+
+void lru(int paginas[], int num_pags, int marcos) {
+    int marco[100];   // tamaño máximo razonable; ajusta si quieres
+    int tiempo[100];
+    int contador = 0, fallos = 0;
+
+    // Inicialización
+    for (int i = 0; i < marcos; i++) {
+        marco[i] = -1;
+        tiempo[i] = -1;  // -1 = marco vacío (siempre reemplazable primero)
+    }
+
+    printf("\n---- Algoritmo LRU ----\n");
+    for (int i = 0; i < num_pags; i++) {
+        int pagina = paginas[i];
+        int pos = buscarLRU(marco, marcos, pagina);
+
+        if (pos == -1) {
+            // Intentar ocupar un marco libre primero
+            int idx = -1;
+            for (int j = 0; j < marcos; j++) {
+                if (marco[j] == -1) { idx = j; break; }
+            }
+            // Si no hay libres, reemplazar el menos recientemente usado
+            if (idx == -1) {
+                idx = 0;
+                for (int j = 1; j < marcos; j++)
+                    if (tiempo[j] < tiempo[idx]) idx = j;
+            }
+            marco[idx] = pagina;
+            tiempo[idx] = ++contador;
+            fallos++;
+        } else {
+            // Hit: actualizamos "último uso"
+            tiempo[pos] = ++contador;
+        }
+
+        // Mostrar estado de marcos
+        printf("Pág %2d -> ", pagina);
+        for (int k = 0; k < marcos; k++) {
+            if (marco[k] == -1) printf("-- ");
+            else                printf("%2d ", marco[k]);
+        }
+        printf("\n");
+    }
+
+    printf("Fallos de página: %d\n", fallos);
+}
+
+int main(void) {
+    // Ejemplo clásico
+    int paginas[] = {7,0,1,2,0,3,0,4,2,3,0,3,2};
+    int num_pags = sizeof(paginas) / sizeof(paginas[0]);
+    int marcos = 3;
+
+    lru(paginas, num_pags, marcos);
+    return 0;
+}
