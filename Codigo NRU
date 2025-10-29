@@ -1,0 +1,106 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+typedef struct {
+    int pagina; // -1 = vacío
+    int R;      // bit de referencia
+    int M;      // bit de modificación (simulado)
+} Pagina;
+
+void nru(int paginas[], int num_pags, int marcos) {
+    if (marcos <= 0) {
+        fprintf(stderr, "Cantidad de marcos inválida.\n");
+        return;
+    }
+
+    Pagina *marco = (Pagina *)calloc((size_t)marcos, sizeof(Pagina));
+    if (!marco) {
+        perror("calloc");
+        return;
+    }
+
+    for (int i = 0; i < marcos; i++) {
+        marco[i].pagina = -1;
+        marco[i].R = 0;
+        marco[i].M = 0;
+    }
+
+    int fallos = 0;
+    const int periodo_reset_R = 4; // “reloj” de NRU para limpiar R
+
+    printf("\n---- Algoritmo NRU ----\n");
+    for (int i = 0; i < num_pags; i++) {
+        int p = paginas[i];
+        int presente = 0;
+
+        // HIT: si está, marcamos R=1 (y M aleatorio si querés simular escrituras)
+        for (int j = 0; j < marcos; j++) {
+            if (marco[j].pagina == p) {
+                marco[j].R = 1;
+                // Simulación: a veces se "modifica" la página
+                marco[j].M = rand() % 2;
+                presente = 1;
+                break;
+            }
+        }
+
+        // MISS: seleccionar por clase NRU (00, 01, 10, 11)
+        if (!presente) {
+            int pos_libre = -1;
+            int candidato = -1;
+            int mejor_clase = 4; // mayor que cualquier clase válida (0..3)
+
+            for (int j = 0; j < marcos; j++) {
+                if (marco[j].pagina == -1) { pos_libre = j; break; }
+            }
+
+            if (pos_libre != -1) {
+                candidato = pos_libre;
+            } else {
+                // Buscar menor clase; si encontramos clase 0, cortamos
+                for (int j = 0; j < marcos; j++) {
+                    int clase = (marco[j].R << 1) | (marco[j].M);
+                    if (clase < mejor_clase) {
+                        mejor_clase = clase;
+                        candidato = j;
+                        if (clase == 0) break; // best possible
+                    }
+                }
+            }
+
+            // Reemplazo
+            marco[candidato].pagina = p;
+            marco[candidato].R = 1;
+            marco[candidato].M = rand() % 2;
+            fallos++;
+        }
+
+        // Mostrar estado
+        printf("Pág %2d -> ", p);
+        for (int k = 0; k < marcos; k++) {
+            if (marco[k].pagina == -1) printf("[--|R%dM%d] ", marco[k].R, marco[k].M);
+            else                       printf("[%2d|R%dM%d] ", marco[k].pagina, marco[k].R, marco[k].M);
+        }
+        printf("\n");
+
+        // Reset periódico de R DESPUÉS de cada 'periodo' accesos
+        if ((i + 1) % periodo_reset_R == 0) {
+            for (int j = 0; j < marcos; j++) marco[j].R = 0;
+        }
+    }
+
+    printf("Fallos de página: %d\n", fallos);
+    free(marco);
+}
+
+int main(void) {
+    // Demo clásica
+    srand((unsigned)time(NULL));
+    int paginas[] = {7,0,1,2,0,3,0,4,2,3,0,3,2};
+    int num_pags = (int)(sizeof(paginas) / sizeof(paginas[0]));
+    int marcos = 3;
+
+    nru(paginas, num_pags, marcos);
+    return 0;
+}
